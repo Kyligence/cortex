@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/Azure/azure-pipeline-go/pipeline"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-01-01/storage"
 	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 
 	"github.com/cortexproject/cortex/pkg/chunk"
 	chunk_util "github.com/cortexproject/cortex/pkg/chunk/util"
@@ -51,6 +53,9 @@ var (
 // BlobStorageConfig defines the configurable flags that can be defined when using azure blob storage.
 type BlobStorageConfig struct {
 	Environment        string         `yaml:"environment"`
+	MSIEnabled         bool           `yaml:"msi_enabled,omitempty"`
+	ResourceGroupName  string         `yaml:"resource_group_name,omitempty"`
+	SubscriptionId     string         `yaml:"subscription_id,omitempty"`
 	ContainerName      string         `yaml:"container_name"`
 	AccountName        string         `yaml:"account_name"`
 	AccountKey         flagext.Secret `yaml:"account_key"`
@@ -99,12 +104,45 @@ func NewBlobStorage(cfg *BlobStorageConfig) (*BlobStorage, error) {
 	}
 
 	var err error
+	// if msi is enabled, use it to get the storage account key
+	_, err = cfg.ValidateAndRefreshStorageCredential()
+	if err != nil {
+		return nil, err
+	}
 	blobStorage.containerURL, err = blobStorage.buildContainerURL()
 	if err != nil {
 		return nil, err
 	}
 
 	return blobStorage, nil
+}
+
+func (cfg *BlobStorageConfig) ValidateAndRefreshStorageCredential() (*BlobStorageConfig, error) {
+	if !cfg.MSIEnabled {
+		// no need to refresh
+		return cfg, nil
+	}
+	settings, err := auth.GetSettingsFromEnvironment()
+	if err != nil {
+		return nil, err
+	}
+	msiAuthorizer, err := settings.GetMSI().Authorizer()
+	if err != nil {
+		return nil, err
+	}
+	subscriptionId := settings.GetSubscriptionID()
+	if subscriptionId != "" {
+		cfg.SubscriptionId = subscriptionId
+	}
+	accountClient := storage.NewAccountsClientWithBaseURI(settings.Environment.ResourceManagerEndpoint, cfg.SubscriptionId)
+	accountClient.Authorizer = msiAuthorizer
+	listResult, err := accountClient.ListKeys(context.Background(), cfg.ResourceGroupName, cfg.AccountName, storage.Kerb)
+	if err != nil {
+		return nil, err
+	}
+	// pick the first record of account key, the result should be two keys
+	cfg.AccountKey = flagext.Secret{Value: *(*listResult.Keys)[0].Value}
+	return cfg, nil
 }
 
 // Stop is a no op, as there are no background workers with this driver currently
