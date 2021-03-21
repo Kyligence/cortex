@@ -104,6 +104,11 @@ func NewBlobStorage(cfg *BlobStorageConfig) (*BlobStorage, error) {
 	}
 
 	var err error
+	// if msi is enabled, use it to get the storage account key
+	_, err = cfg.ValidateAndRefreshStorageCredential()
+	if err != nil {
+		return nil, err
+	}
 	blobStorage.containerURL, err = blobStorage.buildContainerURL()
 	if err != nil {
 		return nil, err
@@ -136,7 +141,7 @@ func (cfg *BlobStorageConfig) ValidateAndRefreshStorageCredential() (*BlobStorag
 		return nil, err
 	}
 	// pick the first record of account key, the result should be two keys
-	cfg.AccountKey = flagext.Secret{Value: *listResult.Keys[0].Value}
+	cfg.AccountKey = flagext.Secret{Value: *(*listResult.Keys)[0].Value}
 	return cfg, nil
 }
 
