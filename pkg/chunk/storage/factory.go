@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cortexproject/cortex/pkg/chunk/huawei"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
@@ -69,8 +71,8 @@ type Config struct {
 	BoltDBConfig           local.BoltDBConfig      `yaml:"boltdb"`
 	FSConfig               local.FSConfig          `yaml:"filesystem"`
 	Swift                  openstack.SwiftConfig   `yaml:"swift"`
-
-	IndexCacheValidity time.Duration `yaml:"index_cache_validity"`
+	HuaweiStorageConfig    huawei.ObsStorageConfig `yaml:"huawei"`
+	IndexCacheValidity     time.Duration           `yaml:"index_cache_validity"`
 
 	IndexQueriesCacheConfig cache.Config `yaml:"index_queries_cache_config"`
 
@@ -91,6 +93,7 @@ func (cfg *Config) RegisterFlags(f *flag.FlagSet) {
 	cfg.DeleteStoreConfig.RegisterFlags(f)
 	cfg.Swift.RegisterFlags(f)
 	cfg.GrpcConfig.RegisterFlags(f)
+	cfg.HuaweiStorageConfig.RegisterFlags(f)
 
 	f.StringVar(&cfg.Engine, "store.engine", "chunks", "The storage engine to use: chunks or blocks.")
 	cfg.IndexQueriesCacheConfig.RegisterFlagsWithPrefix("store.index-cache-read.", "Cache config for index entry reading. ", f)
@@ -116,6 +119,9 @@ func (cfg *Config) Validate() error {
 	}
 	if err := cfg.AzureStorageConfig.Validate(); err != nil {
 		return errors.Wrap(err, "invalid Azure Storage config")
+	}
+	if err := cfg.HuaweiStorageConfig.Validate(); err != nil {
+		return errors.Wrap(err, "invalid Huawei Storage config")
 	}
 	return nil
 }
@@ -276,6 +282,8 @@ func NewChunkClient(name string, cfg Config, schemaCfg chunk.SchemaConfig, regis
 		return objectclient.NewClient(store, objectclient.Base64Encoder), nil
 	case "grpc-store":
 		return grpc.NewStorageClient(cfg.GrpcConfig, schemaCfg)
+	case "obs":
+		return newChunkClientFromStore(huawei.NewObsStorage(&cfg.HuaweiStorageConfig))
 	default:
 		return nil, fmt.Errorf("Unrecognized storage client %v, choose one of: aws, azure, cassandra, inmemory, gcp, bigtable, bigtable-hashed, grpc-store", name)
 	}
@@ -345,7 +353,9 @@ func NewObjectClient(name string, cfg Config) (chunk.ObjectClient, error) {
 		return chunk.NewMockStorage(), nil
 	case "filesystem":
 		return local.NewFSObjectClient(cfg.FSConfig)
+	case "obs":
+		return huawei.NewObsStorage(&cfg.HuaweiStorageConfig)
 	default:
-		return nil, fmt.Errorf("Unrecognized storage client %v, choose one of: aws, s3, gcs, azure, filesystem", name)
+		return nil, fmt.Errorf("Unrecognized storage client %v, choose one of: aws, s3, gcs, azure, filesystem, obs", name)
 	}
 }
