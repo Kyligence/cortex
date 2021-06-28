@@ -35,6 +35,7 @@ require (
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/memberlist v0.2.2
 	github.com/json-iterator/go v1.1.10
+	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.21.1+incompatible
 	github.com/lib/pq v1.3.0
 	github.com/mitchellh/go-wordwrap v1.0.0
 	github.com/ncw/swift v1.0.50
