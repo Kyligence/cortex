@@ -35,6 +35,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.1
 	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/memberlist v0.2.3
+	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.21.1+incompatible
 	github.com/json-iterator/go v1.1.11
 	github.com/lib/pq v1.3.0
 	github.com/minio/minio-go/v7 v7.0.10
