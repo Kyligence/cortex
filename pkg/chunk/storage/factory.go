@@ -282,7 +282,7 @@ func NewChunkClient(name string, cfg Config, schemaCfg chunk.SchemaConfig, regis
 		return objectclient.NewClient(store, objectclient.Base64Encoder), nil
 	case "grpc-store":
 		return grpc.NewStorageClient(cfg.GrpcConfig, schemaCfg)
-	case "obs":
+	case "huawei", "obs":
 		return newChunkClientFromStore(huawei.NewObsStorage(&cfg.HuaweiStorageConfig))
 	default:
 		return nil, fmt.Errorf("Unrecognized storage client %v, choose one of: aws, azure, cassandra, inmemory, gcp, bigtable, bigtable-hashed, grpc-store", name)
@@ -353,7 +353,7 @@ func NewObjectClient(name string, cfg Config) (chunk.ObjectClient, error) {
 		return chunk.NewMockStorage(), nil
 	case "filesystem":
 		return local.NewFSObjectClient(cfg.FSConfig)
-	case "obs":
+	case "huawei", "obs":
 		return huawei.NewObsStorage(&cfg.HuaweiStorageConfig)
 	default:
 		return nil, fmt.Errorf("Unrecognized storage client %v, choose one of: aws, s3, gcs, azure, filesystem, obs", name)
