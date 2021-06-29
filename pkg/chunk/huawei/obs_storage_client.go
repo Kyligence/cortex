@@ -7,7 +7,6 @@ import (
 	"io"
 
 	"github.com/cortexproject/cortex/pkg/chunk"
-	"github.com/cortexproject/cortex/pkg/util/log"
 	"github.com/huaweicloud/huaweicloud-sdk-go-obs/obs"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/weaveworks/common/instrument"
@@ -60,8 +59,6 @@ type ObsStorage struct {
 }
 
 func NewObsStorage(cfg *ObsStorageConfig) (*ObsStorage, error) {
-	log.WarnExperimentalUse("Huawei Obs Storage")
-
 	obsClient, err := obs.New(cfg.AccessKey, cfg.SecretKey, cfg.Endpoint)
 	if err != nil {
 		return nil, err
