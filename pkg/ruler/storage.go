@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/cortexproject/cortex/pkg/chunk/huawei"
+
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,11 +34,12 @@ type RuleStoreConfig struct {
 	ConfigDB client.Config `yaml:"configdb"`
 
 	// Object Storage Configs
-	Azure azure.BlobStorageConfig `yaml:"azure"`
-	GCS   gcp.GCSConfig           `yaml:"gcs"`
-	S3    aws.S3Config            `yaml:"s3"`
-	Swift openstack.SwiftConfig   `yaml:"swift"`
-	Local local.Config            `yaml:"local"`
+	Azure  azure.BlobStorageConfig `yaml:"azure"`
+	GCS    gcp.GCSConfig           `yaml:"gcs"`
+	S3     aws.S3Config            `yaml:"s3"`
+	Swift  openstack.SwiftConfig   `yaml:"swift"`
+	Local  local.Config            `yaml:"local"`
+	Huawei huawei.ObsStorageConfig `yaml:"huawei"`
 
 	mock rulestore.RuleStore `yaml:"-"`
 }
@@ -49,6 +52,7 @@ func (cfg *RuleStoreConfig) RegisterFlags(f *flag.FlagSet) {
 	cfg.S3.RegisterFlagsWithPrefix("ruler.storage.", f)
 	cfg.Swift.RegisterFlagsWithPrefix("ruler.storage.", f)
 	cfg.Local.RegisterFlagsWithPrefix("ruler.storage.", f)
+	cfg.Huawei.RegisterFlagsWithPrefix("ruler.storage.", f)
 
 	f.StringVar(&cfg.Type, "ruler.storage.type", "configdb", "Method to use for backend rule storage (configdb, azure, gcs, s3, swift, local)")
 }
@@ -63,6 +67,9 @@ func (cfg *RuleStoreConfig) Validate() error {
 	}
 	if err := cfg.S3.Validate(); err != nil {
 		return errors.Wrap(err, "invalid S3 Storage config")
+	}
+	if err := cfg.Huawei.Validate(); err != nil {
+		return errors.Wrap(err, "invalid Huawei OBS Storage Config")
 	}
 	return nil
 }
@@ -104,6 +111,8 @@ func NewLegacyRuleStore(cfg RuleStoreConfig, loader promRules.GroupLoader, logge
 		client, err = openstack.NewSwiftObjectClient(cfg.Swift)
 	case "local":
 		return local.NewLocalRulesClient(cfg.Local, loader)
+	case "huawei":
+		client, err = huawei.NewObsStorage(&cfg.Huawei)
 	default:
 		return nil, fmt.Errorf("unrecognized rule storage mode %v, choose one of: configdb, gcs, s3, swift, azure, local", cfg.Type)
 	}

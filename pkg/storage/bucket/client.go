@@ -34,10 +34,13 @@ const (
 
 	// Filesystem is the value for the filesystem storage backend.
 	Filesystem = "filesystem"
+
+	// Huawei is the value for Huawei storage backend
+	Huawei = "huawei"
 )
 
 var (
-	SupportedBackends = []string{S3, GCS, Azure, Swift, Filesystem}
+	SupportedBackends = []string{S3, GCS, Azure, Swift, Filesystem, Huawei}
 
 	ErrUnsupportedStorageBackend = errors.New("unsupported storage backend")
 )
