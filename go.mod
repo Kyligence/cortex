@@ -1,4 +1,4 @@
-module github.com/cortexproject/cortex
+module github.com/Kyligence/cortex
 
 go 1.14
 
