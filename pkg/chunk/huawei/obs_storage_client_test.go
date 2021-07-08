@@ -303,7 +303,7 @@ func TestObsStorage_List(t *testing.T) {
 					w.WriteHeader(http.StatusInternalServerError)
 				} else {
 					w.WriteHeader(200)
-					w.Write([]byte(xmlBytes))
+					_, _ = w.Write([]byte(xmlBytes))
 				}
 			}))
 			defer srv.Close()
